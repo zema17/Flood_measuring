@@ -1,0 +1,60 @@
+:root {
+    --primary-blue: #3498db;
+    --danger-red: #e74c3c;
+    --warning-orange: #f39c12;
+    --safe-green: #2ecc71;
+}
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.dashboard-header {
+    background: linear-gradient(135deg, #2980b9, #2c3e50);
+    color: white;
+    padding: 25px 0;
+    margin-bottom: 30px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+.card-danger {
+    border-left: 6px solid var(--danger-red);
+}
+.card-warning {
+    border-left: 6px solid var(--warning-orange);
+}
+.water-level-display {
+    font-size: 3.5rem;
+    font-weight: 700;
+    background: linear-gradient(to right, var(--primary-blue), #16a085);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.status-badge {
+    font-size: 1.1rem;
+    padding: 8px 15px;
+    border-radius: 50px;
+}
+#waterLevelChart {
+    height: 350px;
+    width: 100%;
+}
+.alert-pulse {
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}

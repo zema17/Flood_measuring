@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flood Monitoring Dashboard</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-danger {
+            border-left: 5px solid var(--danger-color);
+        }
+        .card-warning {
+            border-left: 5px solid var(--warning-color);
+        }
+        .water-level-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .alert-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 0.8rem;
+        }
+        #waterLevelChart {
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header text-center">
+        <h1><i class="fas fa-water me-2"></i> Flood Monitoring System</h1>
+        <p class="mb-0">Real-time water level tracking</p>
+    </div>
+
+    <div class="container">
+        <!-- Current Status Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title"><i class="fas fa-tint me-2"></i>Current Water Level</h5>
+                        <div class="water-level-display" id="currentLevel">--</div>
+                        <p class="text-muted">cm</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title"><i class="fas fa-thermometer-half me-2"></i>Status</h5>
+                        <h2 id="statusText"><span class="badge bg-success">Normal</span></h2>
+                        <p class="text-muted" id="statusDetail">No flood detected</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title"><i class="fas fa-clock me-2"></i>Last Update</h5>
+                        <h3 id="lastUpdate">--:--:--</h3>
+                        <p class="text-muted" id="lastUpdateDate">---</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Row -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Water Level History</h5>
+                        <canvas id="waterLevelChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Row -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-bell me-2"></i>Recent Alerts</h5>
+                        <div class="alert alert-danger" id="alertContainer" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="alertMessage"></span>
+                            <span class="float-end" id="alertTime"></span>
+                        </div>
+                        <div id="noAlertsMessage" class="text-center text-muted py-3">
+                            No recent alerts
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize chart
+        const ctx = document.getElementById('waterLevelChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Water Level (cm)',
+                    data: [],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Centimeters (cm)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Threshold for warnings
+        const WARNING_THRESHOLD = 30;
+        const DANGER_THRESHOLD = 50;
+
+        // Function to update dashboard
+        function updateDashboard(data) {
+            // Update current level
+            document.getElementById('currentLevel').textContent = data.water_level;
+            
+            // Update status
+            const statusElement = document.getElementById('statusText');
+            const statusDetail = document.getElementById('statusDetail');
+            
+            if (data.water_level >= DANGER_THRESHOLD) {
+                statusElement.innerHTML = '<span class="badge bg-danger">DANGER</span>';
+                statusDetail.textContent = 'Flood detected! Immediate action required';
+                showAlert(`Flood warning! Water level reached ${data.water_level}cm`);
+            } else if (data.water_level >= WARNING_THRESHOLD) {
+                statusElement.innerHTML = '<span class="badge bg-warning">WARNING</span>';
+                statusDetail.textContent = 'Water level is rising';
+                showAlert(`Warning! Water level is high: ${data.water_level}cm`);
+            } else {
+                statusElement.innerHTML = '<span class="badge bg-success">NORMAL</span>';
+                statusDetail.textContent = 'No flood detected';
+            }
+            
+            // Update last update time
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+            document.getElementById('lastUpdateDate').textContent = now.toLocaleDateString();
+            
+            // Update chart
+            const timeLabel = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            chart.data.labels.push(timeLabel);
+            chart.data.datasets[0].data.push(data.water_level);
+            
+            // Keep only last 20 data points
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            
+            chart.update();
+        }
+
+        // Function to show alerts
+        function showAlert(message) {
+            const alertContainer = document.getElementById('alertContainer');
+            const noAlertsMessage = document.getElementById('noAlertsMessage');
+            
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertTime').textContent = new Date().toLocaleTimeString();
+            
+            noAlertsMessage.style.display = 'none';
+            alertContainer.style.display = 'block';
+        }
+
+        // Simulate data update (replace with real API call)
+        function fetchData() {
+            // In a real implementation, you would fetch from your API:
+            // fetch('/api/water-level')
+            //     .then(response => response.json())
+            //     .then(data => updateDashboard(data));
+            
+            // For demo purposes - random data
+            const mockData = {
+                water_level: Math.random() * 60
+            };
+            updateDashboard(mockData);
+        }
+
+        // Poll for new data every 5 seconds
+        setInterval(fetchData, 5000);
+        fetchData(); // Initial load
+    </script>
+</body>
+</html>
